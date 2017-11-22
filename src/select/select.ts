@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, ElementRef, OnInit, forwardRef } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ElementRef, OnInit, forwardRef, HostListener } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { SelectItem } from './select-item';
@@ -11,28 +11,29 @@ let styles = `
     position: relative;
   }
 
+
   /* Fix caret going into new line in Firefox */
   .ui-select-placeholder {
     float: left;
   }
-  
+
   /* Fix Bootstrap dropdown position when inside a input-group */
   .input-group > .dropdown {
     /* Instead of relative */
     position: static;
   }
-  
+
   .ui-select-match > .btn {
     /* Instead of center because of .btn */
     text-align: left !important;
   }
-  
+
   .ui-select-match > .caret {
     position: absolute;
     top: 45%;
     right: 15px;
   }
-  
+
   .ui-disabled {
     background-color: #eceeef;
     border-radius: 4px;
@@ -45,15 +46,16 @@ let styles = `
     left: 0;
     cursor: not-allowed;
   }
-  
+
   .ui-select-choices {
     width: 100%;
     height: auto;
     max-height: 200px;
     overflow-x: hidden;
-    margin-top: 0;
+    margin-top: 36px;
+    border-top: none;
   }
-  
+
   .ui-select-multiple .ui-select-choices {
     margin-top: 1px;
   }
@@ -72,12 +74,12 @@ let styles = `
       outline: 0;
       background-color: #428bca;
   }
-  
+
   .ui-select-multiple {
     height: auto;
     padding:3px 3px 0 3px;
   }
-  
+
   .ui-select-multiple input.ui-select-search {
     background-color: transparent !important; /* To prevent double background when disabled */
     border: none;
@@ -86,13 +88,13 @@ let styles = `
     height: 1.6666em;
     padding: 0;
     margin-bottom: 3px;
-    
+
   }
   .ui-select-match .close {
       font-size: 1.6em;
       line-height: 0.75;
   }
-  
+
   .ui-select-multiple .ui-select-match-item {
     outline: 0;
     margin: 0 3px 3px 0;
@@ -103,6 +105,9 @@ let styles = `
       top: 50%;
       right: 10px;
       margin-top: -2px;
+  }
+  .ui-select-container {
+    position: relative;
   }
 `;
 
@@ -122,11 +127,10 @@ let styles = `
     <div tabindex="0"
          *ngIf="multiple === false"
          (keyup)="mainClick($event)"
-         [offClick]="clickedOutside"
-         class="ui-select-container dropdown open">
+         class="ui-select-container  open">
       <div [ngClass]="{'ui-disabled': disabled}"></div>
       <div class="ui-select-match"
-           *ngIf="!inputMode">
+           *ngIf="!inputMode || true">
       <span tabindex="-1"
             class="btn btn-default btn-secondary form-control ui-select-toggle"
             (click)="matchClick($event)"
@@ -143,13 +147,19 @@ let styles = `
         </a>
       </span>
       </div>
-      <input type="text" autocomplete="false" tabindex="-1"
-             (keydown)="inputEvent($event)"
-             (keyup)="inputEvent($event, true)"
-             [disabled]="disabled"
-             class="form-control ui-select-search"
-             *ngIf="inputMode"
-             placeholder="{{active.length <= 0 ? placeholder : ''}}">
+
+      <input
+        role="menuitem"
+        type="text" autocomplete="false" tabindex="-1"
+        (keydown)="inputEvent($event)"
+        (keyup)="inputEvent($event, true)"
+        [disabled]="disabled"
+        class="form-control ui-select-search"
+        *ngIf="inputMode"
+        [placeholder]="placeholder"
+        [hidden]="!allowSearch"
+      >
+
       <!-- options template -->
       <ul *ngIf="optionsOpened && options && options.length > 0 && !firstItemHasChildren"
           class="ui-select-choices dropdown-menu" role="menu">
@@ -260,6 +270,7 @@ export class SelectComponent implements OnInit, ControlValueAccessor {
   @Input() public textField: string = 'text';
   @Input() public childrenField: string = 'children';
   @Input() public multiple: boolean = false;
+  @Input() public allowSearch: boolean = true;
 
   @Input()
   public set items(value: Array<any>) {
@@ -330,6 +341,14 @@ export class SelectComponent implements OnInit, ControlValueAccessor {
 
   private get optionsOpened(): boolean {
     return this._optionsOpened;
+  }
+
+  @HostListener('window:click', [ '$event' ])
+  public onWindowclick(event) {
+    console.log(this.element.nativeElement.contains(event.target));
+    if (!this.element.nativeElement.contains(event.target)) {
+      this.hideOptions();
+    }
   }
 
   protected onChange: any = Function.prototype;
@@ -493,6 +512,8 @@ export class SelectComponent implements OnInit, ControlValueAccessor {
     if (this.inputMode === true && ((this.multiple === true && e) || this.multiple === false)) {
       this.focusToInput();
       this.open();
+    } else {
+      this.hideOptions();
     }
   }
 
