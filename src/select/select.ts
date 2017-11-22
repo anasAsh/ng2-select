@@ -11,7 +11,6 @@ let styles = `
     position: relative;
   }
 
-
   /* Fix caret going into new line in Firefox */
   .ui-select-placeholder {
     float: left;
@@ -52,8 +51,6 @@ let styles = `
     height: auto;
     max-height: 200px;
     overflow-x: hidden;
-    margin-top: 36px;
-    border-top: none;
   }
 
   .ui-select-multiple .ui-select-choices {
@@ -106,9 +103,6 @@ let styles = `
       right: 10px;
       margin-top: -2px;
   }
-  .ui-select-container {
-    position: relative;
-  }
 `;
 
 @Component({
@@ -127,10 +121,11 @@ let styles = `
     <div tabindex="0"
          *ngIf="multiple === false"
          (keyup)="mainClick($event)"
-         class="ui-select-container  open">
+         class="ui-select-container dropdown open">
       <div [ngClass]="{'ui-disabled': disabled}"></div>
       <div class="ui-select-match"
-           *ngIf="!inputMode || true">
+          [hidden]="inputMode && allowSearch"
+           >
       <span tabindex="-1"
             class="btn btn-default btn-secondary form-control ui-select-toggle"
             (click)="matchClick($event)"
@@ -147,19 +142,14 @@ let styles = `
         </a>
       </span>
       </div>
+      <input type="text" autocomplete="false" tabindex="-1"
 
-      <input
-        role="menuitem"
-        type="text" autocomplete="false" tabindex="-1"
-        (keydown)="inputEvent($event)"
-        (keyup)="inputEvent($event, true)"
-        [disabled]="disabled"
-        class="form-control ui-select-search"
-        *ngIf="inputMode"
-        [placeholder]="placeholder"
-        [hidden]="!allowSearch"
-      >
-
+             (keydown)="inputEvent($event)"
+             (keyup)="inputEvent($event, true)"
+             [disabled]="disabled"
+             class="form-control ui-select-search"
+             *ngIf="inputMode && allowSearch"
+             placeholder="{{active.length <= 0 ? placeholder : ''}}">
       <!-- options template -->
       <ul *ngIf="optionsOpened && options && options.length > 0 && !firstItemHasChildren"
           class="ui-select-choices dropdown-menu" role="menu">
@@ -345,8 +335,7 @@ export class SelectComponent implements OnInit, ControlValueAccessor {
 
   @HostListener('window:click', [ '$event' ])
   public onWindowclick(event) {
-    console.log(this.element.nativeElement.contains(event.target));
-    if (!this.element.nativeElement.contains(event.target)) {
+    if (this.optionsOpened && !this.element.nativeElement.contains(event.target)) {
       this.hideOptions();
     }
   }
@@ -552,7 +541,7 @@ export class SelectComponent implements OnInit, ControlValueAccessor {
   }
 
   protected  isActive(value: SelectItem): boolean {
-    return this.activeOption && this.activeOption.id === value.id;
+    return this.activeOption && this.activeOption.id === value.id || (this.active[0] && value.id === this.active[0].id);
   }
 
   protected removeClick(value: SelectItem, event: any): void {
